@@ -1,4 +1,4 @@
-⁹"""
+"""
 Metal45 TCR 교체 효과 대시보드
 Streamlit + Plotly 구현
 실행: streamlit run app.py
