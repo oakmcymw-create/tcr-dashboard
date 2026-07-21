@@ -341,10 +341,13 @@ st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 # 5. 트렌드 차트 3개 (Swap Delay / Temp Alarm / Upper Chamber Temp)
 # ────────────────────────────────────────────────────────────────────────────
 c1, c2, c3 = st.columns(3)
-render_dumbbell_chart(
-    IMPROVE_TABLE.rename(columns={
-        "교체 전(min/day)": "교체전_평균",
-        "교체 후(min/day)": "교체후_평균"
+from heatmap_chart import render_chamber_heatmap
+
+render_chamber_heatmap(
+    real_temp_log_df.rename(columns={
+        "장비명": "설비",
+        "측정일": "날짜",
+        "일별최고온도": "max_temp"
     })
 )
 
