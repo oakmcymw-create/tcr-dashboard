@@ -1,4 +1,4 @@
-"""
+⁹"""
 Metal45 TCR 교체 효과 대시보드
 Streamlit + Plotly 구현
 실행: streamlit run app.py
@@ -553,4 +553,10 @@ with e2:
 st.markdown(
     f"<div class='footnote'>※ WPD 0 또는 Wafer 0 인 날짜는 평균 계산에서 제외되었습니다.</div>",
     unsafe_allow_html=True
+)
+render_dumbbell_chart(
+    IMPROVE_TABLE.rename(columns={
+        "교체 전(min/day)": "교체전_평균",
+        "교체 후(min/day)": "교체후_평균"
+    })
 )
