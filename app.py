@@ -3,7 +3,7 @@ Metal45 TCR 교체 효과 대시보드
 Streamlit + Plotly 구현
 실행: streamlit run app.py
 """
-
+from dumbbell_chart import render_dumbbell_chart
 import numpy as np
 import pandas as pd
 import streamlit as st
