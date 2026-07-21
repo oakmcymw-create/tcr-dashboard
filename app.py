@@ -341,6 +341,12 @@ st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 # 5. 트렌드 차트 3개 (Swap Delay / Temp Alarm / Upper Chamber Temp)
 # ────────────────────────────────────────────────────────────────────────────
 c1, c2, c3 = st.columns(3)
+render_dumbbell_chart(
+    IMPROVE_TABLE.rename(columns={
+        "교체 전(min/day)": "교체전_평균",
+        "교체 후(min/day)": "교체후_평균"
+    })
+)
 
 with c1:
     with st.container():
@@ -553,10 +559,4 @@ with e2:
 st.markdown(
     f"<div class='footnote'>※ WPD 0 또는 Wafer 0 인 날짜는 평균 계산에서 제외되었습니다.</div>",
     unsafe_allow_html=True
-)
-render_dumbbell_chart(
-    IMPROVE_TABLE.rename(columns={
-        "교체 전(min/day)": "교체전_평균",
-        "교체 후(min/day)": "교체후_평균"
-    })
 )
