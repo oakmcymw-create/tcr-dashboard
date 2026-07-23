@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import date, datetime
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -362,33 +363,65 @@ with chart_col:
 
     # ⚠️ "Delay Time == 0"과 "생산량(WPD) == 0"은 다른 의미이므로 반드시 별도 필드로 판단
     rng_wpd = np.random.default_rng(abs(hash(panel2_equip)) % (2**32))
-    wpd = np.full(len(DAY_RANGE), 100)  # 실제로는 설비 로그의 일별 웨이퍼 처리량(WPD) 사용
+    wpd = rng_wpd.integers(80, 121, size=len(DAY_RANGE))
     no_production_days = rng_wpd.choice(len(DAY_RANGE), size=3, replace=False)
     wpd[no_production_days] = 0
 
-    y_sec_masked = np.where(wpd == 0, np.nan, y_sec)  # 비가동일만 결측, 0초 지연은 값 그대로 유지
+    # 위(Swap Delay 꺾은선) : WPD != 0 인 날만 채워진 원+선으로 연결
+    y_valid = np.where(wpd == 0, np.nan, y_sec)
+    # WPD == 0 인 날만 y=0 위치에 비어있는 원으로 표시 (선 연결 없음)
+    y_zero_marker = np.where(wpd == 0, 0, np.nan)
 
-    # 원시값을 그대로 잇는 꺾은선은 결측/노이즈에 취약해 들쭉날쭉해 보이므로,
-    # 원시값은 흐린 점으로만 표시하고 실제 추세는 3일 이동평균선으로 보여줌
-    y_series = pd.Series(y_sec_masked)
-    y_smooth = y_series.rolling(window=3, center=True, min_periods=1).mean()
+    fig = make_subplots(
+        rows=2, cols=1, shared_xaxes=True,
+        row_heights=[0.62, 0.38], vertical_spacing=0.04,
+    )
 
-    fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=DAY_RANGE, y=y_sec_masked, mode="markers",
-        name="Delay Time (일별 원시값)",
-        marker=dict(size=5, color=PRIMARY_BLUE, opacity=0.28),
+        x=DAY_RANGE, y=y_valid, mode="lines+markers",
+        name="Delay Time (가동일)",
+        line=dict(color=PRIMARY_BLUE, width=2.4),
+        marker=dict(symbol="circle", size=6, color=PRIMARY_BLUE),
+        connectgaps=False,  # WPD=0인 지점에서는 선을 잇지 않음
         hovertemplate="Day %{x}<br>%{y:.0f} sec<extra></extra>",
-    ))
+    ), row=1, col=1)
+
     fig.add_trace(go.Scatter(
-        x=DAY_RANGE, y=y_smooth, mode="lines",
-        name="Delay Time (3일 이동평균)",
-        line=dict(color=PRIMARY_BLUE, width=3),
-    ))
-    fig = switch_marker_layout(fig)
-    fig = base_layout(fig, y_title="(sec)", height=440)
+        x=DAY_RANGE, y=y_zero_marker, mode="markers",
+        name="비가동일 (WPD=0)",
+        marker=dict(symbol="circle-open", size=8, color=PRIMARY_BLUE, line=dict(width=1.6)),
+        hovertemplate="Day %{x}<br>비가동 (WPD 0)<extra></extra>",
+    ), row=1, col=1)
+
+    bar_colors = [PRIMARY_RED if w == 0 else "#B9C0D0" for w in wpd]
+    fig.add_trace(go.Bar(
+        x=DAY_RANGE, y=wpd, name="WPD (일별 생산량)",
+        marker_color=bar_colors,
+        hovertemplate="Day %{x}<br>WPD %{y}<extra></extra>",
+    ), row=2, col=1)
+
+    # TCR 교체 시점(Day 0) 기준선을 두 서브플롯 모두에 표시
+    fig.add_vline(x=0, line_width=1.6, line_dash="dash", line_color=PRIMARY_RED, row=1, col=1)
+    fig.add_vline(x=0, line_width=1.6, line_dash="dash", line_color=PRIMARY_RED, row=2, col=1)
+    fig.add_annotation(x=0, y=1.05, xref="x", yref="paper", text="TCR A급 교체",
+                        showarrow=False, font=dict(color=PRIMARY_RED, size=12, family="Arial Black"))
+
+    fig.update_yaxes(title_text="(sec)", gridcolor="#EEF0F5", row=1, col=1)
+    fig.update_yaxes(title_text="WPD", gridcolor="#EEF0F5", row=2, col=1)
+    fig.update_xaxes(showticklabels=False, row=1, col=1)
+    fig.update_xaxes(title_text="(Day)", row=2, col=1,
+                      tickmode="array", tickvals=list(range(-14, 15, 2)))
+    fig.update_layout(
+        height=520,
+        margin=dict(l=10, r=10, t=36, b=10),
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0, font=dict(size=11)),
+        font=dict(size=11, color=TEXT_DARK),
+        bargap=0.25,
+    )
+
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
-    st.markdown('<div class="footnote">※ 옅은 점 = 일별 원시값, 굵은 선 = 3일 이동평균. 생산량(WPD) 0인 비가동일은 원시값에서 제외되며, Delay Time이 실제로 0초인 정상 가동일은 그대로 포함됩니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footnote">※ 채워진 원+실선 = WPD 있는 정상 가동일, 빈 원 = WPD 0(비가동일, 선 미연결). 아래 막대는 일별 WPD이며 빨간 막대가 비가동일입니다.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
