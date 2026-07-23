@@ -164,7 +164,7 @@ def base_layout(fig, y_title="", height=300):
 # 1. 합성 데이터 생성 (교체일 기준 전후 트렌드)
 # ────────────────────────────────────────────────────────────────────────────
 @st.cache_data
-def make_trend(before_level, after_level, noise, seed, before_len=15, after_len=15):
+def make_trend(before_level, after_level, noise, seed, before_len=14, after_len=15):
     rng = np.random.default_rng(seed)
     before = before_level + rng.normal(0, noise, before_len)
     before = np.clip(before, a_min=0, a_max=None)
