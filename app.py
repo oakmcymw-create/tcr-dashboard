@@ -360,24 +360,35 @@ with chart_col:
     y_min_unit = make_trend(120, 8, noise=8, seed=1)
     y_sec = y_min_unit * 60
 
-    # 생산량이 없어 0으로 찍힌 날은 결측(NaN) 처리 → 0으로 뚝 떨어지는 대신 선을 끊어서 표시
-    rng_zero = np.random.default_rng(abs(hash(panel2_equip)) % (2**32))
-    zero_day_idx = rng_zero.choice(len(DAY_RANGE), size=3, replace=False)
-    y_sec_masked = y_sec.copy()
-    y_sec_masked[zero_day_idx] = np.nan
+    # ⚠️ "Delay Time == 0"과 "생산량(WPD) == 0"은 다른 의미이므로 반드시 별도 필드로 판단
+    rng_wpd = np.random.default_rng(abs(hash(panel2_equip)) % (2**32))
+    wpd = np.full(len(DAY_RANGE), 100)  # 실제로는 설비 로그의 일별 웨이퍼 처리량(WPD) 사용
+    no_production_days = rng_wpd.choice(len(DAY_RANGE), size=3, replace=False)
+    wpd[no_production_days] = 0
+
+    y_sec_masked = np.where(wpd == 0, np.nan, y_sec)  # 비가동일만 결측, 0초 지연은 값 그대로 유지
+
+    # 원시값을 그대로 잇는 꺾은선은 결측/노이즈에 취약해 들쭉날쭉해 보이므로,
+    # 원시값은 흐린 점으로만 표시하고 실제 추세는 3일 이동평균선으로 보여줌
+    y_series = pd.Series(y_sec_masked)
+    y_smooth = y_series.rolling(window=3, center=True, min_periods=1).mean()
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=DAY_RANGE, y=y_sec_masked, mode="lines+markers",
-        name="Delay Time (sec/day)",
-        line=dict(color=PRIMARY_BLUE, width=2.4),
-        marker=dict(size=5),
-        connectgaps=False,  # 0(결측)인 구간은 선을 잇지 않고 끊어서 표시
+        x=DAY_RANGE, y=y_sec_masked, mode="markers",
+        name="Delay Time (일별 원시값)",
+        marker=dict(size=5, color=PRIMARY_BLUE, opacity=0.28),
+        hovertemplate="Day %{x}<br>%{y:.0f} sec<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=DAY_RANGE, y=y_smooth, mode="lines",
+        name="Delay Time (3일 이동평균)",
+        line=dict(color=PRIMARY_BLUE, width=3),
     ))
     fig = switch_marker_layout(fig)
     fig = base_layout(fig, y_title="(sec)", height=440)
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
-    st.markdown('<div class="footnote">※ 생산량 0(비가동)인 날짜는 결측으로 처리되어 그래프에서 선이 끊깁니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footnote">※ 옅은 점 = 일별 원시값, 굵은 선 = 3일 이동평균. 생산량(WPD) 0인 비가동일은 원시값에서 제외되며, Delay Time이 실제로 0초인 정상 가동일은 그대로 포함됩니다.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
