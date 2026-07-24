@@ -142,20 +142,20 @@ with h_right:
 # ----------------------------------------------------------------------------
 # SYNTHETIC DATA (레퍼런스 수치에 맞춘 더미 데이터)
 # ----------------------------------------------------------------------------
-days = np.arange(-14, 15)
+days = np.arange(-14, 15)  # -14 ~ +14 (총 29일, 0일 = 교체일)
 
 rng = np.random.default_rng(42)
-delay_before = 104 + rng.normal(0, 12, size=15).cumsum() * 0 + rng.normal(100, 15, 15)
-delay_before = np.clip(90 + rng.normal(0, 15, 15), 60, 140)
+# 교체 전 : -14 ~ -1 (14개) / 교체 후(교체일 포함) : 0 ~ +14 (15개)
+delay_before = np.clip(90 + rng.normal(0, 15, 14), 60, 140)
 delay_after = np.clip(8 + rng.normal(0, 3, 15), 0, 20)
 delay_series = np.concatenate([delay_before, delay_after])
 
-alarm_before = np.clip(rng.normal(28, 6, 15), 15, 45)
+alarm_before = np.clip(rng.normal(28, 6, 14), 15, 45)
 alarm_after = np.clip(rng.normal(2, 1.2, 15), 0, 6)
 alarm_series = np.concatenate([alarm_before, alarm_after])
 
 # 전체 설비 평균 효과 (교체일 기준 정렬)
-avg_before = np.clip(np.linspace(140, 90, 15) + rng.normal(0, 6, 15), 60, 150)
+avg_before = np.clip(np.linspace(140, 90, 14) + rng.normal(0, 6, 14), 60, 150)
 avg_after = np.clip(np.linspace(70, 8, 15) + rng.normal(0, 4, 15), 0, 80)
 avg_series = np.concatenate([avg_before, avg_after])
 
